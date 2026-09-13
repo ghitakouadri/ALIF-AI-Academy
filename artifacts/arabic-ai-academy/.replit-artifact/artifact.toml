@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "ALIF AI Academy"
+description = "ALIF AI Academy is a bilingual Arabic-English learning platform with secure account access, luxury-inspired course playback, OneDrive-hosted lessons, and server-side learning activity records."
+version = "1.0.0"
+id = "artifacts/arabic-ai-academy"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22085
+
+[services.development]
+run = "pnpm --filter @workspace/arabic-ai-academy run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/arabic-ai-academy", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/arabic-ai-academy/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22085"
+BASE_PATH = "/"
