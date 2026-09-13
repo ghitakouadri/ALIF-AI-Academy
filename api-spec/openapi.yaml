@@ -1,0 +1,290 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: lessons
+    description: Authenticated video lessons
+  - name: activity
+    description: Authenticated learning activity
+  - name: comments
+    description: Authenticated lesson discussion
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /lessons:
+    get:
+      operationId: listLessons
+      tags: [lessons]
+      summary: List the academy lessons
+      description: Returns the six configured OneDrive-compatible video lessons.
+      responses:
+        "200":
+          description: Lesson playlist
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lesson"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /activity:
+    post:
+      operationId: recordActivity
+      tags: [activity]
+      summary: Record a sign-in, sign-out, or watched lesson event
+      description: Appends an authenticated event to the server activity.log file.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivityInput"
+      responses:
+        "201":
+          description: Recorded activity event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityLogEntry"
+        "400":
+          description: Invalid activity event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /activity/recent:
+    get:
+      operationId: listRecentActivity
+      tags: [activity]
+      summary: List the current user's recent activity
+      description: Returns recent sign-in, sign-out, and lesson events for the authenticated user.
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityLogEntry"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /lessons/{lessonId}/comments:
+    parameters:
+      - name: lessonId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 5
+    get:
+      operationId: listLessonComments
+      tags: [comments]
+      summary: List comments for a lesson
+      description: Returns comments posted by authenticated academy viewers for the selected lesson.
+      responses:
+        "200":
+          description: Lesson comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LessonComment"
+        "400":
+          description: Invalid lesson
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createLessonComment
+      tags: [comments]
+      summary: Add a comment to a lesson
+      description: Adds an authenticated viewer comment to the selected lesson.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LessonCommentInput"
+      responses:
+        "201":
+          description: Created lesson comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonComment"
+        "400":
+          description: Invalid lesson or comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: integer
+          minimum: 0
+        titleAr:
+          type: string
+        titleEn:
+          type: string
+        descriptionAr:
+          type: string
+        descriptionEn:
+          type: string
+        duration:
+          type: string
+        videoUrl:
+          type: ["string", "null"]
+          description: OneDrive share or embed URL configured for this lesson.
+        videoProvider:
+          type: string
+          enum: [onedrive]
+      required:
+        - id
+        - titleAr
+        - titleEn
+        - descriptionAr
+        - descriptionEn
+        - duration
+        - videoUrl
+        - videoProvider
+    ActivityInput:
+      type: object
+      properties:
+        eventType:
+          type: string
+          enum: [sign_in, sign_out, video_watched]
+        loginName:
+          type: ["string", "null"]
+        lessonId:
+          type: ["integer", "null"]
+        lessonTitle:
+          type: ["string", "null"]
+      required:
+        - eventType
+    ActivityLogEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        eventType:
+          type: string
+          enum: [sign_in, sign_out, video_watched]
+        loginName:
+          type: ["string", "null"]
+        userId:
+          type: string
+        lessonId:
+          type: ["integer", "null"]
+        lessonTitle:
+          type: ["string", "null"]
+      required:
+        - timestamp
+        - eventType
+        - loginName
+        - userId
+        - lessonId
+        - lessonTitle
+    LessonCommentInput:
+      type: object
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+        - content
+    LessonComment:
+      type: object
+      properties:
+        id:
+          type: string
+        lessonId:
+          type: integer
+          minimum: 0
+          maximum: 5
+        userId:
+          type: string
+        authorName:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - lessonId
+        - userId
+        - authorName
+        - content
+        - createdAt
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
